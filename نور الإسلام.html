@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نور الإسلام</title>
+  <style>
+    :root { --primary: #0f7b6c; --secondary: #1aa89c; --bg: #f4f7f6; }
+    body { margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: #333; }
+    header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 25px; text-align: center; }
+    nav { display: flex; overflow-x: auto; background: white; position: sticky; top: 0; }
+    nav a { padding: 15px; text-decoration: none; color: var(--primary); font-weight: bold; flex: 1; text-align: center; }
+    .container { padding: 15px; max-width: 900px; margin: auto; }
+    .card { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; text-align: center; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; background: var(--primary); color: white; cursor: pointer; margin: 5px; }
+    .btn-alt { background: #555; }
+    #count { font-size: 45px; color: var(--primary); font-weight: bold; }
+    .quran-container { max-height: 400px; overflow-y: auto; padding: 15px; border-radius: 10px; background: #fffdf5; line-height: 2; }
+    select { padding: 10px; width: 100%; border-radius: 8px; margin-bottom: 10px; }
+    .prayer-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .p-item { background: #f4f7f6; padding: 10px; border-radius: 8px; }
+    .p-item b { color: var(--primary); display: block; margin-top: 5px; }
+    .azkar-list { list-style: none; padding: 0; text-align: right; }
+    .azkar-list li { padding: 10px; border-bottom: 1px solid #eee; }
+    footer { text-align: center; padding: 15px; font-size: 14px; color: #777; }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>🌙 نور الإسلام</h1>
+  <p id="date-display"></p>
+</header>
+
+<nav>
+  <a href="#tasbih">المسبحة</a>
+  <a href="#azkar-section">الأذكار</a>
+  <a href="#quran-section">القرآن</a>
+  <a href="#prayer-section">المواقيت</a>
+</nav>
+
+<div class="container">
+
+  <div class="card" id="tasbih">
+    <h3 id="zekr-text">سبحان الله</h3>
+    <span id="count">0</span>
+    <button class="btn" onclick="runTasbih()">اضغط للتسبيح</button>
+    <button class="btn btn-alt" onclick="resetTasbih()">تصفير</button>
+  </div>
+
+  <div class="card" id="azkar-section">
+    <h2>☀️ أذكار الصباح والمساء</h2>
+    <select id="azkar-type" onchange="loadAzkar()">
+      <option value="sabah">أذكار الصباح</option>
+      <option value="masaa">أذكار المساء</option>
+    </select>
+    <div class="quran-container" id="azkar-content"></div>
+  </div>
+
+  <div class="card" id="quran-section">
+    <h2>📖 القرآن الكريم</h2>
+    <select id="surah-select" onchange="loadSurah(this.value)">
+      <option value="">اختر السورة...</option>
+    </select>
+    <button class="btn" onclick="loadRandomAyah()">اقرأ آية عشوائية</button>
+    <div class="quran-container" id="quran-display"></div>
+  </div>
+
+  <div class="card" id="prayer-section">
+    <h2>🕌 مواقيت الصلاة</h2>
+    <div class="prayer-grid" id="prayer-times"></div>
+  </div>
+
+</div>
+
+<footer>
+  صنع من قبل شركة <b>FAGM</b> ©
+</footer>
+
+<script>
+// التسبيح
+let tCount = 0, tIndex = 0;
+const tWords = ["سبحان الله","الحمد لله","الله أكبر","لا إله إلا الله"];
+function runTasbih(){
+  tCount++;
+  if(tCount > 33){
+    tCount = 1;
+    tIndex = (tIndex + 1) % tWords.length;
+    document.getElementById("zekr-text").innerText = tWords[tIndex];
+  }
+  document.getElementById("count").innerText = tCount;
+}
+function resetTasbih(){ tCount = 0; document.getElementById("count").innerText = 0; }
+
+// القرآن
+async function initQuran(){
+  const res = await fetch("https://api.alquran.cloud/v1/surah");
+  const data = await res.json();
+  const s = document.getElementById("surah-select");
+  data.data.forEach(x=>{
+    let o = document.createElement("option");
+    o.value = x.number; o.text = x.name;
+    s.add(o);
+  });
+}
+
+async function loadSurah(n){
+  if(!n) return;
+  const res = await fetch(`https://api.alquran.cloud/v1/surah/${n}`);
+  const data = await res.json();
+  document.getElementById("quran-display").innerText =
+    data.data.ayahs.map(a=>`${a.text} ﴿${a.numberInSurah}﴾`).join(" ");
+}
+
+async function loadRandomAyah(){
+  const n = Math.floor(Math.random()*6236)+1;
+  const res = await fetch(`https://api.alquran.cloud/v1/ayah/${n}/ar`);
+  const d = await res.json();
+  document.getElementById("quran-display").innerHTML = `
+    <p style="font-weight:bold;color:var(--primary)">${d.data.text}</p>
+    <small>${d.data.surah.name} – آية ${d.data.numberInSurah}</small>`;
+}
+
+// ✅ أذكار الصباح والمساء كاملة
+const ayatAlKursi = "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِندَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ";
+
+const azkarData = {
+  sabah: [
+    "أصبحنا وأصبح الملك لله والحمد لله",
+    "اللهم بك أصبحنا وبك أمسينا وبك نحيا وبك نموت وإليك المصير",
+    "أعوذ بالله من الشيطان الرجيم",
+    ayatAlKursi,
+    "اللهم ما أصبح بي من نعمة أو بأحد من خلقك فمنك وحدك لا شريك لك فلك الحمد ولك الشكر",
+    "رضيت بالله ربًا وبالإسلام دينًا وبمحمد ﷺ نبيًا",
+    "سبحان الله وبحمده (100 مرة)",
+    "اللهم إني أسألك العفو والعافية في الدنيا والآخرة",
+    "بسم الله الذي لا يضر مع اسمه شيء (3 مرات)"
+  ],
+  masaa: [
+    "أمسينا وأمسى الملك لله والحمد لله",
+    "اللهم بك أمسينا وبك أصبحنا وبك نحيا وبك نموت وإليك المصير",
+    "أعوذ بالله من الشيطان الرجيم",
+    ayatAlKursi,
+    "اللهم ما أمس بي من نعمة أو بأحد من خلقك فمنك وحدك لا شريك لك فلك الحمد ولك الشكر",
+    "رضيت بالله ربًا وبالإسلام دينًا وبمحمد ﷺ نبيًا",
+    "سبحان الله وبحمده (100 مرة)",
+    "اللهم إني أعوذ بك من الهم والحزن",
+    "بسم الله الذي لا يضر مع اسمه شيء (3 مرات)"
+  ]
+};
+
+function loadAzkar(){
+  const t = document.getElementById("azkar-type").value;
+  document.getElementById("azkar-content").innerHTML =
+    `<ul class="azkar-list">${azkarData[t].map((z,i)=>`<li>${i+1}. ${z}</li>`).join("")}</ul>`;
+}
+
+// ✅ مواقيت الصلاة
+function getPrayer(){
+  fetch("https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5")
+  .then(r=>r.json())
+  .then(d=>{
+    const t=d.data.timings;
+    document.getElementById("prayer-times").innerHTML=`
+      <div class="p-item">الفجر<b>${t.Fajr}</b></div>
+      <div class="p-item">الظهر<b>${t.Dhuhr}</b></div>
+      <div class="p-item">العصر<b>${t.Asr}</b></div>
+      <div class="p-item">المغرب<b>${t.Maghrib}</b></div>
+      <div class="p-item">العشاء<b>${t.Isha}</b></div>`;
+  });
+}
+
+window.onload=()=>{
+  initQuran();
+  loadAzkar();
+  getPrayer();
+  document.getElementById("date-display").innerText =
+    new Date().toLocaleDateString("ar-EG",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+};
+</script>
+
+</body>
+</html>
